@@ -1,9 +1,10 @@
+```html
 <!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>明日香のための東京農大向け英語会話 100問</title>
+  <title>明日香の東京農業大 英語会話 100問</title>
   <style>
     :root { --bg:#0b1020; --card:#121a33; --text:#e9ecff; --muted:#aab2d6; --ok:#3ddc97; --ng:#ff5a7a; --btn:#1b2550; --btn2:#22306a; }
     body{ margin:0; font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif; background:linear-gradient(180deg,#0b1020,#060a14); color:var(--text); }
@@ -44,7 +45,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>明日香のための東京農大向け英語会話 100問</h1>
+    <h1>明日香の東京農業大合格 英語会話 100問</h1>
 
     <div class="top">
       <div class="card">
@@ -61,7 +62,8 @@
           <button id="nextBtn">次へ →</button>
           <button id="wrongModeBtn">ミスだけ</button>
           <button id="allModeBtn">全問</button>
-          <button id="shuffleBtn">シャッフル</button>
+          <button id="shuffleBtn">シャッフル（問題順）</button>
+          <button id="reshuffleChoicesBtn" title="全問題の選択肢配置を作り直します">選択肢再配置</button>
           <button id="resetBtn" title="成績を初期化します">成績リセット</button>
         </div>
 
@@ -72,6 +74,18 @@
         <div class="choices" id="choices"></div>
 
         <div class="explain" id="explain" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700; margin-bottom:8px;">学習のコツ（会話文の“罠”を潰す）</div>
+        <ul style="margin:0; padding-left:18px; color:var(--muted); line-height:1.6;">
+          <li><b>直前が提案</b>なら “Why not?” は <b>快諾</b>。</li>
+          <li><b>直前が否定</b>なら “Why not?” は <b>理由質問</b>。</li>
+          <li>“Do you mind …?” は <b>mind=嫌がる</b>。許可は <b>Not at all / No, go ahead</b>。</li>
+          <li>“You can say that again.” は <b>同意</b>。<b>聞き返し</b>は “Can/Could you say that again?”</li>
+          <li>“How come” の後は <b>平叙文語順</b>（倒置しない）。</li>
+        </ul>
+        <div class="footerNote">※成績と「選択肢の配置」はブラウザに保存されます（localStorage）。</div>
       </div>
     </div>
   </div>
@@ -107,7 +121,7 @@ const PATTERN_INFO = {
     title: "Do you mind…?（許可＝Not at all / No, go ahead）",
     detail: [
       "mind は「嫌がる・気にする」。Do you mind…? は「嫌ですか？」",
-      "許可は「嫌じゃない」→ Not at all / Of course not / No, go ahead。",
+      "許可は「嫌がりません」→ Not at all / Of course not / No, go ahead。",
       "Yes を選ぶと「はい、嫌です」になりやすい（罠）。"
     ]
   },
@@ -131,7 +145,7 @@ const PATTERN_INFO = {
     title: "How come の語順（平叙文語順：How come + S + V）",
     detail: [
       "How come は倒置しない（How come you are late?）。",
-      "Why は倒置しやすい（Why are you late?）。",
+      "Why は倒置（Why are you late?）。",
       "選択肢で “How come are you …” などを落とす典型。"
     ]
   },
@@ -195,7 +209,7 @@ const PATTERN_INFO = {
     title: "褒め言葉への返し（Thanks / That's kind of you）",
     detail: [
       "褒められたら基本は感謝＋一言（I'm glad… / I practiced…）。",
-      "否定しすぎず、自然に受け取るのが英語らしい。",
+      "否定しすぎず自然に受け取るのが英語らしい。",
       "Sorry 系や聞き返しは機能違い。"
     ]
   },
@@ -281,7 +295,7 @@ const PATTERN_INFO = {
   }
 };
 
-/** ====== ざっくり語句メモ（選択肢の意味を表示） ====== */
+/** ====== 語句メモ ====== */
 const GLOSS = {
   "why not": "提案への快諾/文脈によっては理由質問「もちろん/なぜダメなの？」",
   "sounds good": "いいね",
@@ -311,7 +325,7 @@ const GLOSS = {
   "maybe another time": "また今度（やんわり断る）",
   "i wish i could but": "そうしたいけど…（やんわり断る）",
   "id love to but": "行きたいけど…（やんわり断る）",
-  "i would but": "できれば…でも（やんわり断る）",
+  "i would but": "できれば…でも（理由）",
   "that works for me": "その案でOK",
   "if i were you id": "もし私なら…（助言）",
   "you might want to talk to your advisor": "アドバイザーに相談した方がいいかも",
@@ -353,7 +367,6 @@ function norm(s){
     .replace(/\s+/g," ")
     .trim();
 }
-
 function glossOf(optionText){
   const k = norm(optionText);
   return GLOSS[k] || "";
@@ -361,151 +374,102 @@ function glossOf(optionText){
 
 /** ====== 100問 ====== */
 const QUESTIONS = [
-  // 1-4 WHY_NOT_AGREE
   {id:1, pattern:"WHY_NOT_AGREE", cue:"提案（昼食）→快諾が自然", stem:`A: Let's grab lunch after the exam.\nB: _____ . I could use a break.`, options:["Why not?","No way.","You can say that again.","How come?"], answer:0},
   {id:2, pattern:"WHY_NOT_AGREE", cue:"提案（図書館）→賛成", stem:`A: Why don't we study at the library today?\nB: _____ . It's quieter there.`, options:["Sounds good.","Beats me.","Not at all.","Come again?"], answer:0},
   {id:3, pattern:"WHY_NOT_AGREE", cue:"誘い（勉強会）→参加OK", stem:`A: Do you want to join our study group?\nB: _____ . Thanks for asking.`, options:["I'd love to.","You're kidding.","Never mind.","Actually, I do."], answer:0},
   {id:4, pattern:"WHY_NOT_AGREE", cue:"提案（コーヒー）→快諾", stem:`A: How about getting some coffee?\nB: _____ . I haven't had any today.`, options:["Sure.","I suppose not.","Tell me about it.","Why not give it a try?"], answer:0},
-
-  // 5-8 WHY_NOT_ASK_REASON
   {id:5, pattern:"WHY_NOT_ASK_REASON", cue:"相手が否定（食べない）→理由質問", stem:`A: I don't eat meat.\nB: _____ ?\nA: I'm trying to cut down on it.`, options:["Why not?","Why not give it a try?","Not at all.","Good for you."], answer:0},
   {id:6, pattern:"WHY_NOT_ASK_REASON", cue:"相手が否定（行けない）→理由を聞く", stem:`A: I can't make it to the meeting.\nB: _____ ?\nA: My train got delayed.`, options:["How come?","With pleasure.","No problem.","You said it."], answer:0},
   {id:7, pattern:"WHY_NOT_ASK_REASON", cue:"相手が否定（出願しない）→理由質問", stem:`A: I won't apply to that university.\nB: _____ ?\nA: The tuition is too high.`, options:["Why not?","Why don't you?","No way.","My pleasure."], answer:0},
   {id:8, pattern:"WHY_NOT_ASK_REASON", cue:"相手が否定（入らない）→理由質問", stem:`A: I'm not joining the club this year.\nB: _____ ?\nA: I need more time for my part-time job.`, options:["How come?","How come are you?","Sure.","Tell me about it."], answer:0},
-
-  // 9-12 WHY_NOT_SUGGEST_V
   {id:9, pattern:"WHY_NOT_SUGGEST_V", cue:"不安→提案（練習しよう）", stem:`A: I'm nervous about the interview.\nB: _____ . We can go over common questions.`, options:["Why not practice a bit?","Why not?","You can say that again.","Not at all."], answer:0},
   {id:10, pattern:"WHY_NOT_SUGGEST_V", cue:"悩み→提案（シャドーイング）", stem:`A: I don't think I'm good at listening.\nB: _____`, options:["Why not try shadowing for ten minutes a day?","Why not?","How come you try shadowing for ten minutes a day?","Do you mind if I try shadowing for ten minutes a day?"], answer:0},
   {id:11, pattern:"WHY_NOT_SUGGEST_V", cue:"行き詰まり→提案（先生に聞く）", stem:`A: This math problem is impossible.\nB: _____`, options:["Why not ask the teacher after class?","You can say that again.","How come did you ask the teacher after class?","Not at all."], answer:0},
   {id:12, pattern:"WHY_NOT_SUGGEST_V", cue:"悩み→提案（単語対策）", stem:`A: I keep forgetting new words.\nB: _____`, options:["Why not make flashcards and review them on the train?","Why not?","Come again?","My pleasure."], answer:0},
-
-  // 13-16 DO_YOU_MIND_ALLOW
   {id:13, pattern:"DO_YOU_MIND_ALLOW", cue:"許可→Not at all", stem:`A: Do you mind if I open the window?\nB: _____ . It's a bit stuffy in here too.`, options:["Not at all.","Yes, I do.","Never mind.","How come?"], answer:0},
   {id:14, pattern:"DO_YOU_MIND_ALLOW", cue:"依頼→許可（嫌じゃない）", stem:`A: Would you mind lending me your notes?\nB: _____ . Here you go.`, options:["Not at all.","Yes, I do.","I'd love to, but","You can say that again."], answer:0},
   {id:15, pattern:"DO_YOU_MIND_ALLOW", cue:"席の許可→Of course not", stem:`A: Do you mind if I sit here?\nB: _____ . Go ahead.`, options:["Of course not.","Yes, I do.","How come?","You said it."], answer:0},
   {id:16, pattern:"DO_YOU_MIND_ALLOW", cue:"依頼→No, not at all", stem:`A: Would you mind closing the door?\nB: _____ . I'll do it now.`, options:["No, not at all.","I'd rather not.","Come again?","Why not?"], answer:0},
-
-  // 17-20 DO_YOU_MIND_REFUSE
   {id:17, pattern:"DO_YOU_MIND_REFUSE", cue:"断る→Actually, I do + 理由", stem:`A: Do you mind if I use your laptop for a minute?\nB: _____ . I haven't saved my work yet.`, options:["Actually, I do.","Not at all.","Sure.","You can say that again."], answer:0},
   {id:18, pattern:"DO_YOU_MIND_REFUSE", cue:"断る→Yes, I do（＝困る）", stem:`A: Would you mind if I turned up the volume?\nB: _____ . I'm trying to concentrate.`, options:["Yes, I do.","Not at all.","Why not?","No problem."], answer:0},
   {id:19, pattern:"DO_YOU_MIND_REFUSE", cue:"断る→I'm afraid I do", stem:`A: Do you mind me asking your age?\nB: _____ . I'd rather not say.`, options:["I'm afraid I do.","No, go ahead.","With pleasure.","That's OK."], answer:0},
   {id:20, pattern:"DO_YOU_MIND_REFUSE", cue:"断る→I'd rather you didn't", stem:`A: Would you mind opening the window?\nB: _____ . It's freezing outside.`, options:["I'd rather you didn't.","Not at all.","Sounds good.","My pleasure."], answer:0},
-
-  // 21-24 YOU_CAN_SAY_THAT_AGAIN
   {id:21, pattern:"YOU_CAN_SAY_THAT_AGAIN", cue:"不満への強い同意", stem:`A: This week's homework was brutal.\nB: _____ . I barely slept.`, options:["You can say that again.","Can you say that again?","Why not?","Never mind."], answer:0},
   {id:22, pattern:"YOU_CAN_SAY_THAT_AGAIN", cue:"共感（うんざり）", stem:`A: I can't believe the train was late again.\nB: _____ . It happens every day.`, options:["Tell me about it.","Beats me.","Not at all.","Sounds good."], answer:0},
   {id:23, pattern:"YOU_CAN_SAY_THAT_AGAIN", cue:"相手の評価に同意", stem:`A: That lecture was really inspiring.\nB: _____ . I learned a lot.`, options:["You said it.","Come again?","No way.","Why not?"], answer:0},
   {id:24, pattern:"YOU_CAN_SAY_THAT_AGAIN", cue:"不満への同意", stem:`A: This cafeteria food is overpriced.\nB: _____ . I miss homemade meals.`, options:["You can say that again.","Of course not.","How come?","With pleasure."], answer:0},
-
-  // 25-28 HOW_COME_ORDER
   {id:25, pattern:"HOW_COME_ORDER", cue:"How come + S + V（倒置しない）", stem:`A: You missed practice yesterday.\nB: _____\nA: I had a fever.`, options:["How come you didn't come?","Why you didn't come?","How come did you not come?","Why did you didn't come?"], answer:0},
   {id:26, pattern:"HOW_COME_ORDER", cue:"How come の後は平叙文語順", stem:`A: You're still here. It's past 10.\nB: How come _____ still here?\nA: I have to finish my report.`, options:["you are","are you","you were","were you"], answer:0},
   {id:27, pattern:"HOW_COME_ORDER", cue:"How come + 過去（you left）", stem:`A: I heard you quit the soccer team.\nB: How come _____ just before the tournament?\nA: I injured my knee.`, options:["you left","did you leave","you leave","did you left"], answer:0},
   {id:28, pattern:"HOW_COME_ORDER", cue:"目的語の語順・形を確認", stem:`A: I thought you said you'd call me.\nB: How come you didn't _____?\nA: Sorry, my phone died.`, options:["call me","you call me","called me","calling me"], answer:0},
-
-  // 29-32 INDIRECT_REFUSAL
   {id:29, pattern:"INDIRECT_REFUSAL", cue:"誘い→理由付きでやんわり断る", stem:`A: Want to go karaoke tonight?\nB: _____ . I have an exam tomorrow.`, options:["I'd love to, but","You can say that again.","Not at all.","Why not?"], answer:0},
   {id:30, pattern:"INDIRECT_REFUSAL", cue:"参加したいが無理→I wish I could, but", stem:`A: Can you join us for lunch?\nB: _____ . I have to pick up my sister.`, options:["I wish I could, but","With pleasure.","Beats me.","Sure, go ahead."], answer:0},
   {id:31, pattern:"INDIRECT_REFUSAL", cue:"依頼→できれば…でも（理由）", stem:`A: Could you drive me to the station?\nB: _____ . My car's in the shop.`, options:["I would, but","Not at all.","You said it.","No kidding."], answer:0},
   {id:32, pattern:"INDIRECT_REFUSAL", cue:"別案で断る（また今度）", stem:`A: Let's watch a movie.\nB: _____ . I promised I'd call my grandparents.`, options:["Maybe another time.","You can say that again.","How come?","Sure thing."], answer:0},
-
-  // 33-36 THANKS_REPLY
   {id:33, pattern:"THANKS_REPLY", cue:"Thanks → どういたしまして", stem:`A: Thanks for helping me with my essay.\nB: _____.`, options:["No problem.","Why not?","Come again?","I'm afraid I do."], answer:0},
   {id:34, pattern:"THANKS_REPLY", cue:"感謝→Anytime", stem:`A: I really appreciate your advice.\nB: _____.`, options:["Anytime.","Beats me.","Not at all.","How come?"], answer:0},
   {id:35, pattern:"THANKS_REPLY", cue:"定番：You're welcome", stem:`A: Thank you so much.\nB: _____.`, options:["You're welcome.","Tell me about it.","No way.","Why did you?"], answer:0},
   {id:36, pattern:"THANKS_REPLY", cue:"丁寧：My pleasure", stem:`A: Thanks a lot for covering my shift.\nB: _____.`, options:["My pleasure.","Actually, I do.","Come again?","I'd rather not."], answer:0},
-
-  // 37-40 APOLOGY_ACCEPT
   {id:37, pattern:"APOLOGY_ACCEPT", cue:"遅刻の謝罪→許容", stem:`A: Sorry I'm late.\nB: _____ . We just started.`, options:["That's OK.","You can say that again.","Why not?","Not at all."], answer:0},
   {id:38, pattern:"APOLOGY_ACCEPT", cue:"返信遅れ→気にしないで", stem:`A: I’m sorry I forgot to reply.\nB: _____ . I know you’ve been busy.`, options:["Don't worry about it.","Beats me.","No way.","With pleasure."], answer:0},
   {id:39, pattern:"APOLOGY_ACCEPT", cue:"ミス→It happens", stem:`A: My bad. I sent the wrong file.\nB: _____ . Just resend it.`, options:["It happens.","How come?","Sure.","You said it."], answer:0},
   {id:40, pattern:"APOLOGY_ACCEPT", cue:"話しかける謝罪→No worries", stem:`A: Sorry to bother you.\nB: _____ . What's up?`, options:["No worries.","Why not?","Come again?","Actually, I do."], answer:0},
-
-  // 41-44 CLARIFICATION_REPEAT
   {id:41, pattern:"CLARIFICATION_REPEAT", cue:"聞き取れない→Pardon me", stem:`A: The deadline has been moved up.\nB: _____ ? Did you say moved up or moved back?`, options:["Pardon me","You can say that again","Why not","Not at all"], answer:0},
   {id:42, pattern:"CLARIFICATION_REPEAT", cue:"聞き返し→Can you say that again?", stem:`A: We need to submit it by Friday.\nB: _____ ? I didn't catch that.`, options:["Can you say that again","You can say that again","How come","Sounds good"], answer:0},
   {id:43, pattern:"CLARIFICATION_REPEAT", cue:"聞き返し→Come again?", stem:`A: The room is on the third floor.\nB: _____ ? The third or the first?`, options:["Come again","My pleasure","No problem","Why not"], answer:0},
   {id:44, pattern:"CLARIFICATION_REPEAT", cue:"依頼で聞き返す", stem:`A: You'll need two copies.\nB: Sorry, _____ ?`, options:["could you repeat that","I'd love to, but","you said it","not at all"], answer:0},
-
-  // 45-48 APPOINTMENT_SCHEDULE
   {id:45, pattern:"APPOINTMENT_SCHEDULE", cue:"空いてる？→I think so", stem:`A: Are you free this Saturday afternoon?\nB: _____ . What time?`, options:["I think so","Beats me","Not at all","Come again"], answer:0},
   {id:46, pattern:"APPOINTMENT_SCHEDULE", cue:"提案→That works for me", stem:`A: How about meeting at 2 p.m.?\nB: _____ . See you then.`, options:["That works for me","Why not","You can say that again","Actually, I do"], answer:0},
   {id:47, pattern:"APPOINTMENT_SCHEDULE", cue:"日程変更→Sure", stem:`A: Can we reschedule our study session?\nB: _____ . When would be good?`, options:["Sure","No way","You said it","With pleasure"], answer:0},
   {id:48, pattern:"APPOINTMENT_SCHEDULE", cue:"条件付きOK（ただし…）", stem:`A: I'm running late. Can we push it back to 5?\nB: _____ . I have a class at 6, though.`, options:["That's fine","Beats me","Come again","No way"], answer:0},
-
-  // 49-52 ADVICE
   {id:49, pattern:"ADVICE", cue:"悩み→If I were you…", stem:`A: I keep making the same grammar mistake.\nB: _____ . Write it down and review it daily.`, options:["If I were you, I'd","How come","Not at all","You can say that again"], answer:0},
   {id:50, pattern:"ADVICE", cue:"迷い→助言（相談）", stem:`A: I'm not sure which elective to take.\nB: _____ . What are you interested in?`, options:["You might want to talk to your advisor","You can say that again","Come again","I'd rather not"], answer:0},
   {id:51, pattern:"ADVICE", cue:"不安→落ち着けの助言", stem:`A: I'm nervous about speaking in class.\nB: _____ . Start with short sentences.`, options:["Try not to overthink it","Tell me about it","Why not","Beats me"], answer:0},
   {id:52, pattern:"ADVICE", cue:"集中できない→場所提案", stem:`A: I can't focus at home.\nB: _____ . The library might help.`, options:["Why don't you study at the library","You said it","Not at all","How come"], answer:0},
-
-  // 53-56 OFFER_HELP
   {id:53, pattern:"OFFER_HELP", cue:"重い→手伝い申し出", stem:`A: This box is heavy.\nB: _____ ?`, options:["Need a hand","You can say that again","How come","Why not"], answer:0},
   {id:54, pattern:"OFFER_HELP", cue:"道に迷う→案内申し出", stem:`A: I'm lost. I can't find Building C.\nB: _____ . It's right behind the library.`, options:["Let me show you.","Tell me about it.","No way.","Never mind."], answer:0},
   {id:55, pattern:"OFFER_HELP", cue:"家事→手伝い申し出", stem:`A: I have too many dishes to wash.\nB: _____ . We'll finish faster.`, options:["I'll help you","How come","Not at all","You said it"], answer:0},
   {id:56, pattern:"OFFER_HELP", cue:"アプリ不調→見てあげる", stem:`A: I'm having trouble with this app.\nB: _____ . What seems to be the issue?`, options:["Let me take a look","Why not?","Come again?","You can say that again"], answer:0},
-
-  // 57-60 COMPLIMENT_RESPONSE
   {id:57, pattern:"COMPLIMENT_RESPONSE", cue:"褒め→Thanks", stem:`A: Your presentation was really clear.\nB: _____ . I'm glad it helped.`, options:["Thanks","Beats me","Not at all","How come"], answer:0},
   {id:58, pattern:"COMPLIMENT_RESPONSE", cue:"褒め→That's kind of you", stem:`A: I like your new haircut.\nB: _____ . I was nervous about it.`, options:["That's kind of you to say","No way","Tell me about it","Why not"], answer:0},
   {id:59, pattern:"COMPLIMENT_RESPONSE", cue:"褒め→I appreciate that", stem:`A: You're so good at explaining things.\nB: _____ . I've practiced a lot.`, options:["I appreciate that","Come again","Not at all","You can say that again"], answer:0},
   {id:60, pattern:"COMPLIMENT_RESPONSE", cue:"褒め→Thanks for saying so", stem:`A: That was a great question you asked.\nB: _____ . I was curious.`, options:["Thanks for saying so","No problem","How come","I'd rather not"], answer:0},
-
-  // 61-64 SMALL_TALK_ICEBREAKER
   {id:61, pattern:"SMALL_TALK_ICEBREAKER", cue:"天気→無難に同意", stem:`A: It's pretty cold today, isn't it?\nB: _____ . I should've brought gloves.`, options:["Yeah, it is","Beats me","Not at all","My pleasure"], answer:0},
   {id:62, pattern:"SMALL_TALK_ICEBREAKER", cue:"初対面→Nice to meet you too", stem:`A: Nice to meet you. I'm Ken.\nB: _____ . I'm Yui.`, options:["Nice to meet you too","Tell me about it","No way","Why not"], answer:0},
   {id:63, pattern:"SMALL_TALK_ICEBREAKER", cue:"近況→Pretty good", stem:`A: Long time no see! How have you been?\nB: _____ . How about you?`, options:["Pretty good","Come again","Not at all","Actually, I do"], answer:0},
   {id:64, pattern:"SMALL_TALK_ICEBREAKER", cue:"軽い相槌→True", stem:`A: This line is moving slowly.\nB: _____ . At least it's not raining.`, options:["True","Beats me","With pleasure","Pardon me"], answer:0},
-
-  // 65-68 NEGOTIATION_MEET_HALFWAY
   {id:65, pattern:"NEGOTIATION_MEET_HALFWAY", cue:"1時 vs 3時→2時で妥協", stem:`A: I want to meet at 1, but you said 3.\nB: Let's _____ and meet at 2.`, options:["meet halfway","spill the beans","call it a day","hit the books"], answer:0},
   {id:66, pattern:"NEGOTIATION_MEET_HALFWAY", cue:"仕事量→分担で妥協", stem:`A: I can't finish all these tasks today.\nB: Let's _____ and split the work.`, options:["meet halfway","pull your leg","ring a bell","burn the midnight oil"], answer:0},
   {id:67, pattern:"NEGOTIATION_MEET_HALFWAY", cue:"食の好み→交互で妥協", stem:`A: I want to eat Italian, but you want sushi.\nB: How about we _____? Italian today, sushi next time.`, options:["meet halfway","hit the books","be under the weather","cost an arm and a leg"], answer:0},
   {id:68, pattern:"NEGOTIATION_MEET_HALFWAY", cue:"予算→妥協案", stem:`A: This plan is too expensive.\nB: Can we _____ on the budget?`, options:["meet halfway","you said it","why not","beats me"], answer:0},
-
-  // 69-72 DISAGREE_HEDGE
   {id:69, pattern:"DISAGREE_HEDGE", cue:"悪い提案→反対＋理由", stem:`A: We should skip class and go shopping.\nB: _____ . We have a quiz today.`, options:["I don't think that's a good idea","You can say that again","Not at all","Why not"], answer:0},
   {id:70, pattern:"DISAGREE_HEDGE", cue:"断定に対して譲歩→反論", stem:`A: This article proves smartphones are always bad.\nB: _____ . It depends on how you use them.`, options:["I see your point, but","With pleasure","No problem","Come again"], answer:0},
   {id:71, pattern:"DISAGREE_HEDGE", cue:"今夜は避けたい→柔らかい拒否", stem:`A: Let's start the project tonight.\nB: _____ . Could we start tomorrow instead?`, options:["I'd rather not","You said it","Why not","Not at all"], answer:0},
   {id:72, pattern:"DISAGREE_HEDGE", cue:"断定を避ける→I'm not so sure", stem:`A: You should memorize everything at once.\nB: _____ . Small steps work better for me.`, options:["I'm not so sure","You can say that again","No way","My pleasure"], answer:0},
-
-  // 73-76 IDIOM_PULL_LEG
   {id:73, pattern:"IDIOM_PULL_LEG", cue:"嘘っぽい話→冗談", stem:`A: I met the president yesterday.\nB: Seriously?\nA: No, I'm just _____.`, options:["pulling your leg","spilling the beans","hitting the books","calling it a day"], answer:0},
   {id:74, pattern:"IDIOM_PULL_LEG", cue:"取消→冗談だった", stem:`A: Our teacher said the exam was canceled.\nB: Really?\nA: Relax, I'm _____.`, options:["pulling your leg","ringing a bell","meeting halfway","under the weather"], answer:0},
   {id:75, pattern:"IDIOM_PULL_LEG", cue:"誇張→冗談", stem:`A: Guess what? I got 100 on every test.\nB: No way!\nA: Haha, I was just _____.`, options:["pulling your leg","burning the midnight oil","spilling the beans","costing an arm and a leg"], answer:0},
   {id:76, pattern:"IDIOM_PULL_LEG", cue:"綴りの罠", stem:`A: Did you really win the lottery?\nB: Of course not. I was _____.`, options:["pulling you leg","pulling your leg","pulling your legs","pulling your legging"], answer:1},
-
-  // 77-80 IDIOM_SPILL_BEANS
   {id:77, pattern:"IDIOM_SPILL_BEANS", cue:"サプライズがバレた→漏らした", stem:`A: Who told you about the surprise party?\nB: Ken did. He _____.`, options:["spilled the beans","hit the books","called it a day","met halfway"], answer:0},
   {id:78, pattern:"IDIOM_SPILL_BEANS", cue:"秘密を守れない→漏らす", stem:`A: Don't tell anyone, okay?\nB: I won't. I can keep a secret.\nA: Last time you _____ and everyone found out.`, options:["spilled the beans","pulled my leg","rang a bell","was under the weather"], answer:0},
   {id:79, pattern:"IDIOM_SPILL_BEANS", cue:"もう言っちゃった→spilled the beans", stem:`A: I wasn't supposed to say anything.\nB: But you already _____.`, options:["spilled the beans","burned the midnight oil","met halfway","rang a bell"], answer:0},
   {id:80, pattern:"IDIOM_SPILL_BEANS", cue:"誰かが漏らしたはず", stem:`A: How did she know about the plan?\nB: Someone must have _____.`, options:["spilled the beans","hit the books","called it a day","said it again"], answer:0},
-
-  // 81-84 IDIOM_RING_BELL
   {id:81, pattern:"IDIOM_RING_BELL", cue:"名前→聞き覚え", stem:`A: Does the name "Dr. Sato" _____?\nB: Yeah, I think he taught my brother.`, options:["ring a bell","pull a leg","spill the beans","call it a day"], answer:0},
   {id:82, pattern:"IDIOM_RING_BELL", cue:"歌→聞き覚え", stem:`A: This song really _____.\nB: Right? It was popular years ago.`, options:["rings a bell","hits the books","meets halfway","is under the weather"], answer:0},
   {id:83, pattern:"IDIOM_RING_BELL", cue:"顔→見覚え", stem:`A: Have we met before? You look familiar.\nB: Hmm, your face _____, but I can't place it.`, options:["rings a bell","spills the beans","calls it a day","costs an arm and a leg"], answer:0},
   {id:84, pattern:"IDIOM_RING_BELL", cue:"本の題名→聞き覚え", stem:`A: The title _____, but I haven't read the book.`, options:["rings a bell","pulls my leg","burns the midnight oil","meets halfway"], answer:0},
-
-  // 85-88 IDIOM_STUDY
   {id:85, pattern:"IDIOM_STUDY", cue:"遊びの誘い→勉強を優先", stem:`A: Want to go out tonight?\nB: I can't. I need to _____.`, options:["hit the books","spill the beans","ring a bell","meet halfway"], answer:0},
   {id:86, pattern:"IDIOM_STUDY", cue:"眠い→夜遅くまで勉強", stem:`A: You look tired.\nB: Yeah, I _____ for the exam.`, options:["burned the midnight oil","pulled your leg","called it a day","rang a bell"], answer:0},
   {id:87, pattern:"IDIOM_STUDY", cue:"継続勉強→hitting the books", stem:`A: How did you improve so fast?\nB: I just kept _____ every day.`, options:["hitting the books","spilling the beans","calling it a day","meeting halfway"], answer:0},
   {id:88, pattern:"IDIOM_STUDY", cue:"3時まで→burned the midnight oil", stem:`A: I stayed up until 3 a.m.\nB: Wow, you really _____.`, options:["burned the midnight oil","rang a bell","met halfway","was under the weather"], answer:0},
-
-  // 89-92 IDIOM_END
   {id:89, pattern:"IDIOM_END", cue:"長時間→切り上げ提案", stem:`A: We've been studying for three hours.\nB: Let's _____ and get some rest.`, options:["call it a day","spill the beans","hit the books","ring a bell"], answer:0},
   {id:90, pattern:"IDIOM_END", cue:"疲れ→切り上げ", stem:`A: I'm too tired to keep working.\nB: Yeah, let's _____.`, options:["call it a day","pull your leg","meet halfway","be under the weather"], answer:0},
   {id:91, pattern:"IDIOM_END", cue:"夜→call it a night", stem:`A: It's getting late.\nB: Let's _____ and continue tomorrow.`, options:["call it a night","cost an arm and a leg","hit the books","you said it"], answer:0},
   {id:92, pattern:"IDIOM_END", cue:"完成→終了", stem:`A: We finished the draft.\nB: Great. We can _____.`, options:["call it a day","burn the midnight oil","spill the beans","ring a bell"], answer:0},
-
-  // 93-96 IDIOM_UNDER_WEATHER
   {id:93, pattern:"IDIOM_UNDER_WEATHER", cue:"欠席理由→体調不良", stem:`A: Are you coming to class?\nB: I don't think so. I'm _____.`, options:["under the weather","pulling your leg","on the same page","out of the blue"], answer:0},
   {id:94, pattern:"IDIOM_UNDER_WEATHER", cue:"顔色→体調不良", stem:`A: You look pale. Are you okay?\nB: Not really. I've been feeling _____ all morning.`, options:["under the weather","meet halfway","ring a bell","hit the books"], answer:0},
   {id:95, pattern:"IDIOM_UNDER_WEATHER", cue:"練習休み→体調不良", stem:`A: Why did you skip practice?\nB: I was _____.`, options:["under the weather","spilling the beans","calling it a day","pulling your leg"], answer:0},
   {id:96, pattern:"IDIOM_UNDER_WEATHER", cue:"少し具合悪い", stem:`A: You sound awful.\nB: Yeah, I'm a bit _____ today.`, options:["under the weather","out of the blue","up in the air","by the book"], answer:0},
-
-  // 97-100 IDIOM_COST_LAST_STRAW
   {id:97, pattern:"IDIOM_COST_LAST_STRAW", cue:"値段→高すぎる", stem:`A: How much was that textbook?\nB: It _____.`, options:["cost an arm and a leg","rang a bell","hit the books","met halfway"], answer:0},
   {id:98, pattern:"IDIOM_COST_LAST_STRAW", cue:"買えない→高すぎる", stem:`A: I can't buy that jacket.\nB: Yeah, it _____.`, options:["costs an arm and a leg","spills the beans","calls it a day","is under the weather"], answer:0},
   {id:99, pattern:"IDIOM_COST_LAST_STRAW", cue:"怒りの限界→the last straw", stem:`A: He was late again?\nB: Yes, and that was _____.`, options:["the last straw","out of the blue","under the weather","on the same page"], answer:0},
@@ -513,19 +477,21 @@ const QUESTIONS = [
 ];
 
 /** ====== 状態管理（保存） ====== */
-const STORAGE_KEY = "nodai_convo_quiz_v1";
+const STORAGE_KEY = "nodai_convo_quiz_v2"; // v2に更新
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return {attempts:{}, correctIds:[], wrongIds:[]};
+    if(!raw) return {attempts:{}, correctIds:[], wrongIds:[], choiceOrder:{}};
     const obj = JSON.parse(raw);
     return {
       attempts: obj.attempts || {},
       correctIds: obj.correctIds || [],
-      wrongIds: obj.wrongIds || []
+      wrongIds: obj.wrongIds || [],
+      // 各問題の選択肢並び（表示Index -> 元Index の配列）
+      choiceOrder: obj.choiceOrder || {}
     };
   }catch(e){
-    return {attempts:{}, correctIds:[], wrongIds:[]};
+    return {attempts:{}, correctIds:[], wrongIds:[], choiceOrder:{}};
   }
 }
 function saveState(s){
@@ -537,12 +503,41 @@ let mode = "all"; // all | wrong
 let order = QUESTIONS.map(q=>q.id);
 let idx = 0;
 
+function qById(id){ return QUESTIONS.find(q=>q.id===id); }
+
+function addUnique(arr, v){ if(!arr.includes(v)) arr.push(v); }
+function removeItem(arr, v){ const k = arr.indexOf(v); if(k>=0) arr.splice(k,1); }
+
+/** ====== 選択肢を1〜4にランダム配置（問題ごとに固定） ====== */
+function randomPermutation4(){
+  const a = [0,1,2,3];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function getChoiceOrderFor(id){
+  // 既に保存されていればそれを使う（正解位置が安定する）
+  const saved = perf.choiceOrder[String(id)];
+  if(Array.isArray(saved) && saved.length === 4) return saved;
+
+  // 新規生成して保存
+  const perm = randomPermutation4();
+  perf.choiceOrder[String(id)] = perm;
+  saveState(perf);
+  return perm;
+}
+function resetAllChoiceOrders(){
+  perf.choiceOrder = {};
+  saveState(perf);
+}
+
+/** ====== 問題順 ====== */
 function rebuildOrder(shuffle=false){
   if(mode === "wrong"){
     order = perf.wrongIds.slice();
-    if(order.length === 0){
-      order = [];
-    }
+    if(order.length === 0) order = [];
   }else{
     order = QUESTIONS.map(q=>q.id);
   }
@@ -555,8 +550,6 @@ function rebuildOrder(shuffle=false){
   idx = Math.min(idx, Math.max(0, order.length-1));
 }
 
-function qById(id){ return QUESTIONS.find(q=>q.id===id); }
-
 function setMode(newMode){
   mode = newMode;
   document.getElementById("modePill").textContent = "モード：" + (mode==="all" ? "全問" : "ミスだけ");
@@ -565,6 +558,7 @@ function setMode(newMode){
   render();
 }
 
+/** ====== UI ====== */
 function buildJump(){
   const jump = document.getElementById("jump");
   jump.innerHTML = "";
@@ -595,6 +589,13 @@ function updateTopPills(){
   document.getElementById("scorePill").textContent = `正解：${c} / 不正解：${w}`;
 }
 
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+let currentDisplayed = null; 
+// currentDisplayed = { id, perm, displayedToOriginal, originalToDisplayed }
+
 function render(){
   updateTopPills();
 
@@ -616,15 +617,30 @@ function render(){
   const id = order[idx];
   const q = qById(id);
 
+  // ★問題ごとに選択肢の並びを固定でランダム化
+  const perm = getChoiceOrderFor(id); // displayedIndex -> originalIndex
+  const displayedOptions = perm.map(oi => q.options[oi]);
+
+  // 逆引き（originalIndex -> displayedIndex）
+  const originalToDisplayed = {};
+  perm.forEach((origIdx, dispIdx)=>{ originalToDisplayed[origIdx] = dispIdx; });
+
+  currentDisplayed = {
+    id,
+    perm,
+    displayedToOriginal: perm,
+    originalToDisplayed
+  };
+
   stemEl.textContent = q.stem;
 
   choicesEl.innerHTML = "";
-  q.options.forEach((optText, i)=>{
+  displayedOptions.forEach((optText, dispIdx)=>{
     const btn = document.createElement("button");
     btn.className = "choice";
-    const label = ["A","B","C","D"][i];
+    const label = ["A","B","C","D"][dispIdx];
     btn.textContent = `${label}. ${optText}`;
-    btn.onclick = ()=>answer(i);
+    btn.onclick = ()=>answer(dispIdx); // dispIdx を渡す
     choicesEl.appendChild(btn);
   });
 
@@ -635,18 +651,17 @@ function render(){
   if(!jump.disabled) jump.value = String(idx);
 }
 
-function addUnique(arr, v){
-  if(!arr.includes(v)) arr.push(v);
-}
-function removeItem(arr, v){
-  const k = arr.indexOf(v);
-  if(k>=0) arr.splice(k,1);
-}
-
-function answer(choiceIndex){
+function answer(displayedChoiceIndex){
   const id = order[idx];
   const q = qById(id);
-  const isCorrect = (choiceIndex === q.answer);
+
+  const mapping = currentDisplayed && currentDisplayed.id === id
+    ? currentDisplayed
+    : { displayedToOriginal: getChoiceOrderFor(id), originalToDisplayed: {} };
+
+  // displayedIndex → originalIndex に戻して採点
+  const chosenOriginalIndex = mapping.displayedToOriginal[displayedChoiceIndex];
+  const isCorrect = (chosenOriginalIndex === q.answer);
 
   perf.attempts[id] = (perf.attempts[id] || 0) + 1;
 
@@ -658,25 +673,32 @@ function answer(choiceIndex){
   }
   saveState(perf);
 
-  showExplanation(q, choiceIndex, isCorrect);
+  showExplanation(q, displayedChoiceIndex, isCorrect);
   updateTopPills();
   buildJump();
 }
 
-function showExplanation(q, choiceIndex, isCorrect){
+function showExplanation(q, displayedChoiceIndex, isCorrect){
   const explainEl = document.getElementById("explain");
-  const chosenLabel = ["A","B","C","D"][choiceIndex];
-  const correctLabel = ["A","B","C","D"][q.answer];
-  const head = isCorrect ? `<span class="badgeOK">正解</span>` : `<span class="badgeNG">不正解</span>`;
+  const id = q.id;
+  const perm = getChoiceOrderFor(id);
+  const displayedOptions = perm.map(oi => q.options[oi]);
 
+  const chosenLabel = ["A","B","C","D"][displayedChoiceIndex];
+
+  // 正解の“表示位置”を求める
+  const correctDisplayedIndex = perm.indexOf(q.answer);
+  const correctLabel = ["A","B","C","D"][correctDisplayedIndex];
+
+  const head = isCorrect ? `<span class="badgeOK">正解</span>` : `<span class="badgeNG">不正解</span>`;
   const pInfo = PATTERN_INFO[q.pattern] || {title:"", detail:[]};
 
-  // 選択肢の意味表示
-  const li = q.options.map((t,i)=>{
+  const li = displayedOptions.map((t, dispIdx)=>{
     const gl = glossOf(t);
-    const tag = (i===q.answer) ? "（正解）" : "";
+    const origIdx = perm[dispIdx];
+    const tag = (origIdx === q.answer) ? "（正解）" : "";
     const glossLine = gl ? `：${gl}` : "";
-    return `<li><b>${["A","B","C","D"][i]}.</b> ${escapeHtml(t)} ${tag}<div class="small">${escapeHtml(glossLine)}</div></li>`;
+    return `<li><b>${["A","B","C","D"][dispIdx]}.</b> ${escapeHtml(t)} ${tag}<div class="small">${escapeHtml(glossLine)}</div></li>`;
   }).join("");
 
   const attempts = perf.attempts[q.id] || 0;
@@ -696,21 +718,10 @@ function showExplanation(q, choiceIndex, isCorrect){
   explainEl.style.display = "block";
 }
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-}
-
-/** ====== UIイベント ====== */
-document.getElementById("prevBtn").onclick = ()=>{
-  if(idx>0){ idx--; render(); }
-};
-document.getElementById("nextBtn").onclick = ()=>{
-  if(idx<order.length-1){ idx++; render(); }
-};
-document.getElementById("jump").onchange = (e)=>{
-  idx = Number(e.target.value)||0;
-  render();
-};
+/** ====== イベント ====== */
+document.getElementById("prevBtn").onclick = ()=>{ if(idx>0){ idx--; render(); } };
+document.getElementById("nextBtn").onclick = ()=>{ if(idx<order.length-1){ idx++; render(); } };
+document.getElementById("jump").onchange = (e)=>{ idx = Number(e.target.value)||0; render(); };
 document.getElementById("wrongModeBtn").onclick = ()=> setMode("wrong");
 document.getElementById("allModeBtn").onclick = ()=> setMode("all");
 document.getElementById("shuffleBtn").onclick = ()=>{
@@ -718,9 +729,19 @@ document.getElementById("shuffleBtn").onclick = ()=>{
   buildJump();
   render();
 };
+// ★選択肢配置を全問で作り直し（正解位置が毎回ランダムに変わる）
+document.getElementById("reshuffleChoicesBtn").onclick = ()=>{
+  if(confirm("全問題の選択肢（A〜D）の配置を作り直します。よろしいですか？")){
+    resetAllChoiceOrders();
+    render();
+  }
+};
 document.getElementById("resetBtn").onclick = ()=>{
   if(confirm("成績（正解/不正解/試行回数）をリセットします。よろしいですか？")){
-    perf = {attempts:{}, correctIds:[], wrongIds:[]};
+    // 成績だけリセット（選択肢配置は保持）
+    perf.attempts = {};
+    perf.correctIds = [];
+    perf.wrongIds = [];
     saveState(perf);
     rebuildOrder(false);
     buildJump();
@@ -734,7 +755,4 @@ render();
 </script>
 </body>
 </html>
-
-
-
-
+```
